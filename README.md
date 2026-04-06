@@ -41,6 +41,7 @@ See the `patterns/` directory for detailed examples of each integration pattern:
 2. **[Pattern B: Machine as Orchestrator](patterns/pattern-b-orchestrator.md)** — XState invokes queries via `queryClient` imperative API
 3. **[Pattern C: Reactive Bridge](patterns/pattern-c-reactive-bridge.md)** — `useQuery` results synced back to machine via events
 4. **[Pattern D: Mutation Orchestration](patterns/pattern-d-mutation-orchestration.md)** — XState coordinates multi-step mutations
+5. **[Pattern E: Multi-Page Flows with React Router](patterns/pattern-e-router-integration.md)** — XState flow spanning multiple routes with URL sync
 
 ## Decision Guide
 

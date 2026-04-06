@@ -134,6 +134,18 @@ expect(actor.getSnapshot().value).toBe('expectedState')
 
 No React Testing Library, no QueryClientProvider, no renders.
 
-## 10. Start with Pattern A, escalate to Pattern B when needed
+## 10. Machine definition vs actor instance
+
+The machine (`createMachine(...)`) is a static blueprint — always defined at module level. The **actor** is a running instance. Where you create the actor determines its lifecycle:
+
+| Scope | How | Lifecycle |
+|-------|-----|-----------|
+| Single component | `useMachine(machine)` | Created on mount, stopped on unmount |
+| Shared across routes | `createActorContext(machine)` + `<Provider>` | Tied to Provider mount |
+| App-global singleton | `createActor(machine).start()` at module scope | Lives forever (rare, hard to test) |
+
+**Default to `useMachine`**. Use `createActorContext` when a flow spans multiple routes (Pattern E). Avoid module-level singletons unless you have a truly global background process (WebSocket manager, auth session) — they're hard to test and can't receive React-specific dependencies like `queryClient`.
+
+## 11. Start with Pattern A, escalate to Pattern B when needed
 
 Pattern A (Flow Controller) is the simplest and cleanest. Only escalate to Pattern B (Orchestrator) when you need the machine to branch based on server data content. Only escalate to Pattern D when you have multi-step mutations with rollback needs.
