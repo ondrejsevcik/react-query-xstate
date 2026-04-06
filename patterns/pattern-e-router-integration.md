@@ -415,33 +415,74 @@ This gives you fine-grained control:
 
 #### Exposing navigation availability to the UI
 
-Components often need to know whether back/forward is currently allowed (to disable buttons, show tooltips, etc.). Use `useSelector` to derive this from the machine:
+Components often need to know whether back/forward is currently allowed (to disable buttons, show tooltips, etc.). The key insight: **`snapshot.can()` checks if a transition would succeed without firing it**. This means your guards serve double duty — they control transitions AND drive UI state.
+
+##### Don't: reimplement guard logic in the component
+
+```tsx
+// BAD: duplicates what the machine already knows
+const canGoForward = OnboardingFlow.useSelector((snapshot) => {
+  switch (snapshot.value) {
+    case 'profile':
+      return !!snapshot.context.profileData
+    case 'workspace':
+      return !!snapshot.context.workspaceData
+    case 'review':
+      return true
+    default:
+      return false
+  }
+})
+```
+
+This switch statement reimplements the machine's guards. When you add a new condition (e.g., "workspace also requires a billing address"), you'd have to update both the machine AND this selector — they'll inevitably drift apart.
+
+##### Do: use `snapshot.can()` to ask the machine directly
+
+```tsx
+// GOOD: machine is the single authority
+const canGoForward = OnboardingFlow.useSelector((snapshot) =>
+  snapshot.can({ type: 'NEXT' })
+)
+```
+
+`snapshot.can()` runs the actual guards defined in the machine without causing a transition. One source of truth, zero duplication.
+
+##### Co-locate selectors with the machine definition
+
+For selectors used across multiple components, define them alongside the machine — not in the components that consume them:
+
+```tsx
+// machines/onboarding.ts — selectors live with the machine
+import { type SnapshotFrom } from 'xstate'
+
+export const onboardingMachine = setup({ ... }).createMachine({ ... })
+
+// Selectors — co-located so they stay in sync with the machine
+export const canGoBackSelector = (snapshot: SnapshotFrom<typeof onboardingMachine>) =>
+  snapshot.can({ type: 'BACK' })
+
+export const canGoForwardSelector = (snapshot: SnapshotFrom<typeof onboardingMachine>) =>
+  snapshot.can({ type: 'NEXT' })
+
+export const currentStepSelector = (snapshot: SnapshotFrom<typeof onboardingMachine>) =>
+  snapshot.value as string
+```
+
+This pattern (borrowed from Redux) keeps "how to read machine state" next to "how machine state works." When you change a guard, the selector stays in sync automatically because it delegates to the machine.
+
+##### The `useFlowNavigation` hook
 
 ```tsx
 // hooks/useFlowNavigation.ts
 import { OnboardingFlow } from '../context/onboarding-flow'
+import { canGoBackSelector, canGoForwardSelector } from '../machines/onboarding'
 
 export function useFlowNavigation() {
   const actorRef = OnboardingFlow.useActorRef()
 
-  const canGoBack = OnboardingFlow.useSelector((snapshot) => {
-    // Check if BACK event would cause a transition
-    return snapshot.can({ type: 'BACK' })
-  })
-
-  const canGoForward = OnboardingFlow.useSelector((snapshot) => {
-    // Depends on current state
-    switch (snapshot.value) {
-      case 'profile':
-        return !!snapshot.context.profileData
-      case 'workspace':
-        return !!snapshot.context.workspaceData
-      case 'review':
-        return true
-      default:
-        return false
-    }
-  })
+  const canGoBack = OnboardingFlow.useSelector(canGoBackSelector)
+  const canGoForward = OnboardingFlow.useSelector(canGoForwardSelector)
 
   return {
     canGoBack,

@@ -146,6 +146,34 @@ The machine (`createMachine(...)`) is a static blueprint — always defined at m
 
 **Default to `useMachine`**. Use `createActorContext` when a flow spans multiple routes (Pattern E). Avoid module-level singletons unless you have a truly global background process (WebSocket manager, auth session) — they're hard to test and can't receive React-specific dependencies like `queryClient`.
 
-## 11. Start with Pattern A, escalate to Pattern B when needed
+## 11. Use `snapshot.can()` instead of reimplementing guards in UI
+
+When components need to know if a transition is possible (to disable buttons, show tooltips), ask the machine — don't rewrite its guards in component code:
+
+```tsx
+// BAD: duplicates guard logic, will drift
+const canGoForward = useSelector((snapshot) => {
+  switch (snapshot.value) {
+    case 'profile': return !!snapshot.context.profileData
+    case 'workspace': return !!snapshot.context.workspaceData
+    default: return false
+  }
+})
+
+// GOOD: machine is the single authority
+const canGoForward = useSelector((snapshot) =>
+  snapshot.can({ type: 'NEXT' })
+)
+```
+
+Co-locate selectors with the machine definition so they stay in sync:
+
+```tsx
+// machines/onboarding.ts
+export const canGoBackSelector = (snapshot: SnapshotFrom<typeof onboardingMachine>) =>
+  snapshot.can({ type: 'BACK' })
+```
+
+## 12. Start with Pattern A, escalate to Pattern B when needed
 
 Pattern A (Flow Controller) is the simplest and cleanest. Only escalate to Pattern B (Orchestrator) when you need the machine to branch based on server data content. Only escalate to Pattern D when you have multi-step mutations with rollback needs.

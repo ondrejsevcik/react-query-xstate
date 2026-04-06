@@ -87,7 +87,7 @@ states: {
 
 ## Golden Rules
 
-See **[Golden Rules](patterns/golden-rules.md)** for the 10 principles that keep this integration clean. The top 3:
+See **[Golden Rules](patterns/golden-rules.md)** for the 12 principles that keep this integration clean. The top 3:
 
 1. **Never duplicate server state** — query cache is the single source of truth for server data
 2. **Pick one data-flow direction** per interaction — don't mix Machine→Query and Query→Machine for the same data  
