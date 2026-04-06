@@ -145,7 +145,7 @@ export const orderTrackingMachine = setup({
 // components/OrderTracker.tsx
 import { useMachine } from '@xstate/react'
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { orderTrackingMachine } from '../machines/order-tracking'
 
 export function OrderTracker({ orderId }: { orderId: string }) {
@@ -154,7 +154,7 @@ export function OrderTracker({ orderId }: { orderId: string }) {
   })
 
   // React Query polls for updates
-  const { data, error, dataUpdatedAt } = useQuery({
+  const { data, error } = useQuery({
     queryKey: ['order', orderId],
     queryFn: () => fetchOrderStatus(orderId),
     refetchInterval: 30_000, // poll every 30s
@@ -163,14 +163,13 @@ export function OrderTracker({ orderId }: { orderId: string }) {
   })
 
   // Bridge: send data updates to machine
-  // Using dataUpdatedAt as the dependency avoids re-sending on re-renders
-  const lastSentAt = useRef<number>(0)
+  // React Query's structural sharing keeps `data` reference stable
+  // when the response hasn't changed, so this only fires on real updates
   useEffect(() => {
-    if (data && dataUpdatedAt > lastSentAt.current) {
-      lastSentAt.current = dataUpdatedAt
+    if (data) {
       send({ type: 'ORDER_UPDATE', data })
     }
-  }, [data, dataUpdatedAt, send])
+  }, [data, send])
 
   useEffect(() => {
     if (error) {
@@ -193,41 +192,34 @@ export function OrderTracker({ orderId }: { orderId: string }) {
 
 ## Making the Bridge Safe
 
-### Problem: `useEffect` can fire multiple times
+### Why the bridge is simpler than it looks
 
-React 18 strict mode double-invokes effects. React Query may update `data` reference even if content hasn't changed.
-
-### Solution: Guard on meaningful changes
+React Query's **structural sharing** (`structuralSharing: true`, the default) keeps the `data` reference stable when the refetched response is deeply equal. This means `data` only gets a new reference when the data actually changed — so a simple `[data, send]` dependency array is all you need.
 
 ```tsx
-// Option 1: Use dataUpdatedAt (timestamp changes only on actual fetch)
-const lastSentAt = useRef<number>(0)
+// This is sufficient — no ref, no dataUpdatedAt needed
 useEffect(() => {
-  if (data && dataUpdatedAt > lastSentAt.current) {
-    lastSentAt.current = dataUpdatedAt
+  if (data) {
     send({ type: 'ORDER_UPDATE', data })
   }
-}, [data, dataUpdatedAt, send])
-
-// Option 2: Guard on semantic change in the machine
-// The machine already handles duplicate events gracefully —
-// if it's in 'shipped' and receives 'shipped' again, no transition happens
-// (because the guard checks for a DIFFERENT status)
+}, [data, send])
 ```
 
-### Problem: Render loops
+### What about React Strict Mode?
+
+Strict mode double-invokes effects, so the machine may receive the same event twice on mount. This is harmless — the machine handles it as a no-op since the guards check for a *different* status (e.g., a machine already in `shipped` ignores another `ORDER_UPDATE` with `status: 'shipped'`).
+
+### Avoiding render loops
 
 If sending an event causes a state change that changes `enabled`, which triggers a fetch, which triggers `useEffect`, which sends an event...
 
-### Solution: Machine states should be stable
-
-Design the machine so that `ORDER_UPDATE` with the same status is a no-op (no transition). The guards above already do this — each transition requires a *different* status.
+**Solution:** Design the machine so that `ORDER_UPDATE` with the same status is a no-op (no transition). The guards above already do this — each transition requires a *different* status.
 
 ## Custom Hook to Encapsulate the Bridge
 
 ```tsx
 // hooks/useQueryToMachine.ts
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { AnyActorRef } from 'xstate'
 
 /**
@@ -236,20 +228,17 @@ import { AnyActorRef } from 'xstate'
  */
 export function useQueryBridge<TData>(
   actorRef: AnyActorRef,
-  query: { data: TData | undefined; error: Error | null; dataUpdatedAt: number },
+  query: { data: TData | undefined; error: Error | null },
   options: {
     onData: (data: TData) => { type: string; [key: string]: any }
     onError?: (error: Error) => { type: string; [key: string]: any }
   }
 ) {
-  const lastSentAt = useRef(0)
-
   useEffect(() => {
-    if (query.data && query.dataUpdatedAt > lastSentAt.current) {
-      lastSentAt.current = query.dataUpdatedAt
+    if (query.data) {
       actorRef.send(options.onData(query.data))
     }
-  }, [query.data, query.dataUpdatedAt, actorRef, options.onData])
+  }, [query.data, actorRef, options.onData])
 
   useEffect(() => {
     if (query.error && options.onError) {
