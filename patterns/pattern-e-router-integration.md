@@ -300,10 +300,13 @@ export const onboardingMachine = setup({
     canReview: ({ context }) =>
       !!context.profileData && !!context.workspaceData,
 
-    // Target step matches
-    toProfile: ({ event }) => (event as any).step === 'profile',
-    toWorkspace: ({ event }) => (event as any).step === 'workspace',
-    toReview: ({ event }) => (event as any).step === 'review',
+    // Target step matches — narrow the event type first
+    toProfile: ({ event }) =>
+      event.type === 'SYNC_TO_STEP' && event.step === 'profile',
+    toWorkspace: ({ event }) =>
+      event.type === 'SYNC_TO_STEP' && event.step === 'workspace',
+    toReview: ({ event }) =>
+      event.type === 'SYNC_TO_STEP' && event.step === 'review',
   },
 }).createMachine({
   id: 'onboarding',

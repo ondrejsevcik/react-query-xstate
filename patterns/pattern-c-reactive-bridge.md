@@ -43,9 +43,11 @@ export const orderTrackingMachine = setup({
       | { type: 'DISMISS' },
   },
   actions: {
-    notifyShipped: ({ context, event }) => {
+    notifyShipped: ({ event }) => {
       // Side effect: show a toast, send analytics, etc.
-      console.log('Order shipped!', (event as any).data?.trackingNumber)
+      if (event.type === 'ORDER_UPDATE') {
+        console.log('Order shipped!', event.data.trackingNumber)
+      }
     },
     notifyDelivered: () => {
       console.log('Order delivered!')

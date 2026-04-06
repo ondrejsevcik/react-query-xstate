@@ -90,7 +90,7 @@ export const fulfillOrderMachine = setup({
           actions: assign({
             error: ({ event }) => ({
               step: 'reserveInventory',
-              message: (event.error as Error).message,
+              message: event.error.message,
             }),
           }),
         },
@@ -113,7 +113,7 @@ export const fulfillOrderMachine = setup({
           actions: assign({
             error: ({ event }) => ({
               step: 'chargePayment',
-              message: (event.error as Error).message,
+              message: event.error.message,
             }),
           }),
         },
@@ -139,7 +139,7 @@ export const fulfillOrderMachine = setup({
           actions: assign({
             error: ({ event }) => ({
               step: 'createShipment',
-              message: (event.error as Error).message,
+              message: event.error.message,
             }),
           }),
         },

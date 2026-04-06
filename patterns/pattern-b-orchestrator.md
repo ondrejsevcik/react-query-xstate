@@ -46,16 +46,6 @@ export const authFlowMachine = setup({
       throw new Error('loadUserProfile must be provided')
     }),
   },
-  guards: {
-    isAdmin: ({ event }) => {
-      // event.output is the resolved User from the invoked actor
-      return (event as any).output?.role === 'admin'
-    },
-    needsOnboarding: ({ event }) => {
-      const user = (event as any).output as User
-      return user.role === 'user' && !user.onboardingComplete
-    },
-  },
 }).createMachine({
   id: 'authFlow',
   initial: 'unauthenticated',
@@ -78,15 +68,22 @@ export const authFlowMachine = setup({
         src: 'loadUserProfile',
         input: ({ context }) => ({ userId: context.userId! }),
         onDone: [
-          // Guards checked in order — first match wins
-          { guard: 'isAdmin', target: 'adminDashboard' },
-          { guard: 'needsOnboarding', target: 'onboarding' },
+          // Inline guards on onDone — XState types event.output as User
+          {
+            guard: ({ event }) => event.output.role === 'admin',
+            target: 'adminDashboard',
+          },
+          {
+            guard: ({ event }) =>
+              event.output.role === 'user' && !event.output.onboardingComplete,
+            target: 'onboarding',
+          },
           { target: 'home' },
         ],
         onError: {
           target: 'profileError',
           actions: assign({
-            error: ({ event }) => (event.error as Error).message,
+            error: ({ event }) => event.error.message,
           }),
         },
       },
