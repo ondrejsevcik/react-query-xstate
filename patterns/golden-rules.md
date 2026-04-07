@@ -290,3 +290,43 @@ Reserve `errorElement` for truly fatal errors where losing the flow is acceptabl
 ## 14. Start with Pattern A, escalate to Pattern B when needed
 
 Pattern A (Flow Controller) is the simplest and cleanest. Only escalate to Pattern B (Orchestrator) when you need the machine to branch based on server data content. Only escalate to Pattern D when you have multi-step mutations with rollback needs.
+
+## 15. Know when you don't need XState
+
+Not every multi-step flow needs a state machine. If your flow is a straight line — step 1, step 2, step 3, done — with no branching, no guards, and no complex side effects, a simple index is clearer:
+
+```tsx
+function SimpleWizard() {
+  const [step, setStep] = useState(0)
+  const steps = [ProfileForm, AddressForm, ConfirmationForm]
+  const StepComponent = steps[step]
+
+  return (
+    <StepComponent
+      onNext={() => setStep((s) => Math.min(s + 1, steps.length - 1))}
+      onBack={() => setStep((s) => Math.max(s - 1, 0))}
+    />
+  )
+}
+```
+
+### You probably don't need XState when:
+
+- Every user takes the same path through the same steps in the same order
+- "Navigation" is just incrementing/decrementing an index
+- There are no guards — every step transition is always valid
+- There are no side effects tied to transitions (no "send analytics when entering step 3")
+- A single `useMutation` on the final step is the only server interaction
+
+### You probably need XState when:
+
+- **Conditional steps** — "skip payment if the order is free"
+- **Guards** — "can't proceed to review unless shipping is valid"
+- **Non-linear navigation** — "payment failure goes back to shipping, not to payment form"
+- **Parallel states** — "uploading documents while filling out the form"
+- **Complex side-effect orchestration** — "reserve inventory, charge payment, create shipment, rollback on failure" (Pattern D)
+- **Multiple actors reacting to the same flow** — "notify analytics, update cache, and send confirmation in parallel on completion"
+
+### The litmus test
+
+> Can you describe your flow as "step 1, step 2, step 3, done" with no "if," "unless," or "but first"? You don't need a machine. The moment you add your first conditional — `if (order.total === 0) skip payment` — that `if` will multiply. That's when XState earns its keep.
