@@ -152,10 +152,14 @@ This is the critical piece — it syncs machine state with the URL in both direc
 // components/OnboardingBridge.tsx
 import { useEffect, useEffectEvent, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router'
+import { type SnapshotFrom } from 'xstate'
 import { OnboardingFlow } from '../context/onboarding-flow'
+import { onboardingMachine } from '../machines/onboarding'
 
-// Machine state → URL path
-const STATE_TO_PATH: Record<string, string> = {
+// Machine state → URL path (keyed by the machine's inferred state union)
+type OnboardingState = SnapshotFrom<typeof onboardingMachine>['value']
+
+const STATE_TO_PATH: Record<OnboardingState, string> = {
   profile: '/onboarding/profile',
   workspace: '/onboarding/workspace',
   review: '/onboarding/review',
@@ -180,7 +184,7 @@ export function OnboardingBridge() {
   // useEffectEvent ensures the callback always reads the latest
   // location.pathname and navigate without resubscribing on every route change
   const handleSnapshot = useEffectEvent((snapshot) => {
-    const targetPath = STATE_TO_PATH[snapshot.value as string]
+    const targetPath = STATE_TO_PATH[snapshot.value]
     if (targetPath && targetPath !== location.pathname) {
       machineNavigatedRef.current = true
       navigate(targetPath)
@@ -232,7 +236,7 @@ export function OnboardingBridge() {
   // Machine → URL
   // useEffectEvent keeps the subscription stable across route changes
   const handleSnapshot = useEffectEvent((snapshot) => {
-    const targetPath = STATE_TO_PATH[snapshot.value as string]
+    const targetPath = STATE_TO_PATH[snapshot.value]
     if (targetPath && targetPath !== location.pathname) {
       machineNavigatedRef.current = true
       navigate(targetPath)
@@ -476,7 +480,7 @@ export const canGoForwardSelector = (snapshot: SnapshotFrom<typeof onboardingMac
   snapshot.can({ type: 'NEXT' })
 
 export const currentStepSelector = (snapshot: SnapshotFrom<typeof onboardingMachine>) =>
-  snapshot.value as string
+  snapshot.value
 ```
 
 This pattern (borrowed from Redux) keeps "how to read machine state" next to "how machine state works." When you change a guard, the selector stays in sync automatically because it delegates to the machine.
