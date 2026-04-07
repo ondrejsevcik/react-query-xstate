@@ -220,7 +220,7 @@ If sending an event causes a state change that changes `enabled`, which triggers
 ```tsx
 // hooks/useQueryBridge.ts
 import { useEffect, useEffectEvent } from 'react'
-import { type AnyActorRef } from 'xstate'
+import { type ActorRef, type EventObject } from 'xstate'
 
 /**
  * Bridges a React Query result to an XState machine by sending events
@@ -230,12 +230,12 @@ import { type AnyActorRef } from 'xstate'
  * closure values without needing to be in the effect dependency array.
  * Consumers can pass inline arrows freely — no useCallback required.
  */
-export function useQueryBridge<TData>(
-  actorRef: AnyActorRef,
+export function useQueryBridge<TData, TEvent extends EventObject>(
+  actorRef: ActorRef<any, TEvent>,
   query: { data: TData | undefined; error: Error | null },
   options: {
-    onData: (data: TData) => { type: string; [key: string]: any }
-    onError?: (error: Error) => { type: string; [key: string]: any }
+    onData: (data: TData) => TEvent
+    onError?: (error: Error) => TEvent
   }
 ) {
   const handleData = useEffectEvent((data: TData) => {
