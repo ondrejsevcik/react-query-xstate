@@ -29,6 +29,10 @@ type User = {
   onboardingComplete: boolean
 }
 
+function toErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
 export const authFlowMachine = setup({
   types: {
     context: {} as {
@@ -83,7 +87,7 @@ export const authFlowMachine = setup({
         onError: {
           target: 'profileError',
           actions: assign({
-            error: ({ event }) => event.error.message,
+            error: ({ event }) => toErrorMessage(event.error),
           }),
         },
       },

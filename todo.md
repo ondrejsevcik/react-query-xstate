@@ -18,6 +18,6 @@
 
 ## Minor Type Safety Nits
 
-- [ ] **11. `event.error.message` assumes Error instance** — XState v5 types `error` as `unknown`. Needs type guard. (`patterns/pattern-b-orchestrator.md`)
+- [x] **11. `event.error.message` assumes Error instance** — XState v5 types `error` as `unknown`. Needs type guard. (`patterns/pattern-b-orchestrator.md`)
 - [ ] **12. `snapshot.value as string` cast** — hides bug for hierarchical/parallel states. (`patterns/pattern-e-router-integration.md`)
 - [ ] **13. `AnyActorRef` in `useQueryBridge`** — loses event type safety. Use generic constrained to machine events. (`patterns/pattern-c-reactive-bridge.md`)
