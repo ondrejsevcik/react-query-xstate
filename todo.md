@@ -5,7 +5,7 @@
 - [x] **1. Pattern A race condition in `onConfirm`** — moved `CONFIRM` to `onMutate` callback so mutation lifecycle is the sole bridge. (`patterns/pattern-a-flow-controller.md`)
 - [x] **2. Pattern C `useQueryBridge` stale closure** — replaced with `useEffectEvent` (React 19+) so inline callbacks work without `useCallback`. (`patterns/pattern-c-reactive-bridge.md`)
 - [x] **3. Pattern E navigation bridge timing** — `location.pathname` captured in subscription closure, torn down/recreated on every route change. Fix: use ref for pathname inside subscription. (`patterns/pattern-e-router-integration.md`)
-- [ ] **4. `ensureQueryData` vs `fetchQuery` table is incorrect** — both read cache and respect staleTime. Fix the table in golden rules. (`patterns/golden-rules.md`)
+- [x] **4. `ensureQueryData` vs `fetchQuery` table is incorrect** — both read cache and respect staleTime. Fix the table in golden rules. (`patterns/golden-rules.md`)
 - [x] **5. Pattern A trade-offs typo** — fixed to "Pattern B (Orchestrator)". (`patterns/pattern-a-flow-controller.md`)
 
 ## Missing Guidance (add new sections)

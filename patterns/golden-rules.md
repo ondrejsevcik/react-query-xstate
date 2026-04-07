@@ -114,12 +114,14 @@ states: {
 
 ## 8. Prefer `ensureQueryData` over `fetchQuery`
 
-| Method | Reads cache? | Respects staleTime? |
-|--------|-------------|-------------------|
-| `ensureQueryData` | Yes | Yes |
-| `fetchQuery` | No (always fetches) | No |
+Both methods read the cache and respect `staleTime` — neither blindly fetches. The differences are subtler:
 
-`ensureQueryData` is correct 90% of the time. Use `fetchQuery` only when you explicitly need fresh data regardless of cache.
+| Method | Behavior | Use when |
+|--------|----------|----------|
+| `ensureQueryData` | Returns cache if fresh. If stale/missing, fetches. Supports `revalidateIfStale` for background refresh | Default choice — "make sure this data exists" |
+| `fetchQuery` | Returns cache if fresh. If stale/missing, fetches. Throws on error | You need to handle errors explicitly in the machine's `onError` |
+
+`ensureQueryData` is correct 90% of the time — its "ensure" semantic matches what XState actors typically need: give me the data, whether from cache or network.
 
 ## 9. Test machines without React
 
