@@ -285,6 +285,53 @@ The mutation's lifecycle callbacks drive all machine transitions. `onMutate` fir
 ### 4. The machine's `submitting` state has no `invoke`
 The machine doesn't own the mutation. It just represents the semantic state "we are submitting." React Query's `useMutation` does the actual work. This avoids double-tracking the loading state.
 
+## Suspense Compatibility
+
+`useSuspenseQuery` does not accept `enabled` — it always fetches when the component mounts. This breaks Pattern A's core mechanism of deriving `enabled` from machine state.
+
+**The fix:** Pattern A's step-based conditional rendering already solves this. The machine controls *which component mounts*, so each step component can use `useSuspenseQuery` freely — it only fetches when the machine is in that state.
+
+### Before (non-Suspense, single component with `enabled`)
+
+```tsx
+// All queries in one component, gated by `enabled`
+const { data: shippingRates } = useQuery({
+  queryKey: ['shipping-rates', zip],
+  queryFn: () => fetchShippingRates(zip),
+  enabled: snapshot.matches('shipping') && !!zip,
+})
+```
+
+### After (Suspense, query lives in step component)
+
+```tsx
+// Checkout.tsx — machine controls which step mounts
+if (snapshot.matches('shipping')) {
+  return (
+    <Suspense fallback={<ShippingFormSkeleton />}>
+      <ShippingStep
+        zip={context.shippingAddress!.zip}
+        onSubmit={(address) => send({ type: 'SUBMIT_SHIPPING', address })}
+        onBack={() => send({ type: 'BACK' })}
+      />
+    </Suspense>
+  )
+}
+
+// ShippingStep.tsx — always fetches, no `enabled` needed
+function ShippingStep({ zip, onSubmit, onBack }) {
+  const { data: shippingRates } = useSuspenseQuery({
+    queryKey: ['shipping-rates', zip],
+    queryFn: () => fetchShippingRates(zip),
+  })
+
+  // `shippingRates` is always defined here — no loading check needed
+  return <ShippingForm rates={shippingRates} onSubmit={onSubmit} onBack={onBack} />
+}
+```
+
+The machine's conditional rendering (`snapshot.matches('shipping')`) replaces `enabled` — the component only mounts when the machine is in the right state, so the query only runs at the right time. Each `<Suspense>` boundary keeps other steps visible while one step loads.
+
 ## Trade-offs
 
 **Gains:**
