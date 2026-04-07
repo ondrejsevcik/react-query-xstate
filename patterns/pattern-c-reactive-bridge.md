@@ -218,13 +218,17 @@ If sending an event causes a state change that changes `enabled`, which triggers
 ## Custom Hook to Encapsulate the Bridge
 
 ```tsx
-// hooks/useQueryToMachine.ts
-import { useEffect } from 'react'
-import { AnyActorRef } from 'xstate'
+// hooks/useQueryBridge.ts
+import { useEffect, useEffectEvent } from 'react'
+import { type AnyActorRef } from 'xstate'
 
 /**
  * Bridges a React Query result to an XState machine by sending events
  * when the query data changes.
+ *
+ * Uses useEffectEvent (React 19+) so the callbacks always read the latest
+ * closure values without needing to be in the effect dependency array.
+ * Consumers can pass inline arrows freely — no useCallback required.
  */
 export function useQueryBridge<TData>(
   actorRef: AnyActorRef,
@@ -234,20 +238,26 @@ export function useQueryBridge<TData>(
     onError?: (error: Error) => { type: string; [key: string]: any }
   }
 ) {
-  useEffect(() => {
-    if (query.data) {
-      actorRef.send(options.onData(query.data))
+  const handleData = useEffectEvent((data: TData) => {
+    actorRef.send(options.onData(data))
+  })
+
+  const handleError = useEffectEvent((error: Error) => {
+    if (options.onError) {
+      actorRef.send(options.onError(error))
     }
-  }, [query.data, actorRef, options.onData])
+  })
 
   useEffect(() => {
-    if (query.error && options.onError) {
-      actorRef.send(options.onError(query.error))
-    }
-  }, [query.error, actorRef, options.onError])
+    if (query.data) handleData(query.data)
+  }, [query.data])
+
+  useEffect(() => {
+    if (query.error) handleError(query.error)
+  }, [query.error])
 }
 
-// Usage:
+// Usage — inline arrows are fine, no useCallback needed:
 const actorRef = useActorRef(orderTrackingMachine, { input: { orderId } })
 const query = useQuery({ queryKey: ['order', orderId], queryFn: ... })
 
