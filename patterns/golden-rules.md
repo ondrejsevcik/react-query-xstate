@@ -142,11 +142,11 @@ The machine (`createMachine(...)`) is a static blueprint — always defined at m
 
 | Scope | How | Lifecycle |
 |-------|-----|-----------|
-| Single component | `useMachine(machine)` | Created on mount, stopped on unmount |
+| Single component | `useActorRef(machine)` | Created on mount, stopped on unmount |
 | Shared across routes | `createActorContext(machine)` + `<Provider>` | Tied to Provider mount |
 | App-global singleton | `createActor(machine).start()` at module scope | Lives forever (rare, hard to test) |
 
-**Default to `useMachine`**. Use `createActorContext` when a flow spans multiple routes (Pattern E). Avoid module-level singletons unless you have a truly global background process (WebSocket manager, auth session) — they're hard to test and can't receive React-specific dependencies like `queryClient`.
+**Default to `useActorRef`**. Use `createActorContext` when a flow spans multiple routes (Pattern E). Avoid module-level singletons unless you have a truly global background process (WebSocket manager, auth session) — they're hard to test and can't receive React-specific dependencies like `queryClient`.
 
 ## 11. Use `snapshot.can()` instead of reimplementing guards in UI
 
@@ -176,6 +176,44 @@ export const canGoBackSelector = (snapshot: SnapshotFrom<typeof onboardingMachin
   snapshot.can({ type: 'BACK' })
 ```
 
-## 12. Start with Pattern A, escalate to Pattern B when needed
+## 12. Use `useActorRef` + `useSelector`, not `useMachine`
+
+`useMachine` re-renders the component on **every** state change. `useActorRef` returns a stable ref that never causes re-renders on its own, and `useSelector` subscribes to only the slice you need.
+
+```tsx
+// BAD: re-renders on every transition, even if this component only reads `step`
+const [snapshot, send] = useMachine(checkoutMachine)
+const step = snapshot.value
+
+// GOOD: only re-renders when `step` actually changes
+const actorRef = useActorRef(checkoutMachine)
+const step = useSelector(actorRef, (s) => s.value)
+const send = actorRef.send
+```
+
+Always default to `useActorRef` + `useSelector`. It costs one extra line, but you never need to rewrite when you later want to narrow the subscription. Define selectors alongside the machine to keep them in sync:
+
+```tsx
+// machines/checkout.ts
+export const stepSelector = (snapshot: SnapshotFrom<typeof checkoutMachine>) =>
+  snapshot.value
+
+export const canGoBackSelector = (snapshot: SnapshotFrom<typeof checkoutMachine>) =>
+  snapshot.can({ type: 'BACK' })
+
+// component.tsx
+const step = useSelector(actorRef, stepSelector)
+const canGoBack = useSelector(actorRef, canGoBackSelector)
+```
+
+For selectors that return objects, pass a comparator to avoid re-renders from new references:
+
+```tsx
+import { shallowEqual } from '@xstate/react' // or your own
+
+const address = useSelector(actorRef, (s) => s.context.shippingAddress, shallowEqual)
+```
+
+## 13. Start with Pattern A, escalate to Pattern B when needed
 
 Pattern A (Flow Controller) is the simplest and cleanest. Only escalate to Pattern B (Orchestrator) when you need the machine to branch based on server data content. Only escalate to Pattern D when you have multi-step mutations with rollback needs.

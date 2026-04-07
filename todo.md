@@ -11,7 +11,7 @@
 ## Missing Guidance (add new sections)
 
 - [x] **6. Suspense integration** — `useSuspenseQuery` doesn't accept `enabled`, breaking Pattern A's core mechanism. Add compatibility notes.
-- [ ] **7. `useMachine` vs `useActorRef` + `useSelector` performance** — `useMachine` re-renders on every state change. Add perf guidance.
+- [x] **7. `useMachine` vs `useActorRef` + `useSelector` performance** — `useMachine` re-renders on every state change. Add perf guidance.
 - [ ] **8. Error boundary placement** — no guidance on where error boundaries go relative to machine providers.
 - [ ] **9. Replace `setTimeout` in tests with `waitFor`** — fragile in CI. Use XState's `waitFor` or subscription-based approach. (`patterns/pattern-b-orchestrator.md`, `patterns/pattern-d-mutation-orchestration.md`)
 - [ ] **10. When NOT to use XState** — linear multi-step forms with no branching don't need a state machine.
