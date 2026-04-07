@@ -150,7 +150,7 @@ This is the critical piece — it syncs machine state with the URL in both direc
 
 ```tsx
 // components/OnboardingBridge.tsx
-import { useEffect, useRef } from 'react'
+import { useEffect, useEffectEvent, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router'
 import { OnboardingFlow } from '../context/onboarding-flow'
 
@@ -177,16 +177,20 @@ export function OnboardingBridge() {
   const machineNavigatedRef = useRef(false)
 
   // Machine → URL: when machine transitions, update the URL
+  // useEffectEvent ensures the callback always reads the latest
+  // location.pathname and navigate without resubscribing on every route change
+  const handleSnapshot = useEffectEvent((snapshot) => {
+    const targetPath = STATE_TO_PATH[snapshot.value as string]
+    if (targetPath && targetPath !== location.pathname) {
+      machineNavigatedRef.current = true
+      navigate(targetPath)
+    }
+  })
+
   useEffect(() => {
-    const subscription = actorRef.subscribe((snapshot) => {
-      const targetPath = STATE_TO_PATH[snapshot.value as string]
-      if (targetPath && targetPath !== location.pathname) {
-        machineNavigatedRef.current = true
-        navigate(targetPath)
-      }
-    })
+    const subscription = actorRef.subscribe(handleSnapshot)
     return () => subscription.unsubscribe()
-  }, [actorRef, navigate, location.pathname])
+  }, [actorRef])
 
   // URL → Machine: when URL changes (back button, deep link), sync machine
   useEffect(() => {
@@ -226,16 +230,19 @@ export function OnboardingBridge() {
   const machineNavigatedRef = useRef(false)
 
   // Machine → URL
+  // useEffectEvent keeps the subscription stable across route changes
+  const handleSnapshot = useEffectEvent((snapshot) => {
+    const targetPath = STATE_TO_PATH[snapshot.value as string]
+    if (targetPath && targetPath !== location.pathname) {
+      machineNavigatedRef.current = true
+      navigate(targetPath)
+    }
+  })
+
   useEffect(() => {
-    const subscription = actorRef.subscribe((snapshot) => {
-      const targetPath = STATE_TO_PATH[snapshot.value as string]
-      if (targetPath && targetPath !== location.pathname) {
-        machineNavigatedRef.current = true
-        navigate(targetPath)
-      }
-    })
+    const subscription = actorRef.subscribe(handleSnapshot)
     return () => subscription.unsubscribe()
-  }, [actorRef, navigate, location.pathname])
+  }, [actorRef])
 
   // URL → Machine (with rejection handling)
   useEffect(() => {
