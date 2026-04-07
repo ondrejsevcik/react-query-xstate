@@ -164,7 +164,7 @@ export function AuthFlow() {
 
 ```tsx
 // machines/__tests__/auth-flow.test.ts
-import { createActor, fromPromise } from 'xstate'
+import { createActor, fromPromise, waitFor } from 'xstate'
 import { authFlowMachine } from '../auth-flow'
 
 function createTestActor(userOverrides: Partial<User> = {}) {
@@ -187,17 +187,16 @@ test('admin goes to admin dashboard', async () => {
   const actor = createTestActor({ role: 'admin' })
   actor.start()
   actor.send({ type: 'LOGIN_SUCCESS', userId: '1' })
-  // Wait for invoke to resolve
-  await new Promise((r) => setTimeout(r, 0))
-  expect(actor.getSnapshot().value).toBe('adminDashboard')
+  const snapshot = await waitFor(actor, (s) => s.matches('adminDashboard'))
+  expect(snapshot.value).toBe('adminDashboard')
 })
 
 test('new user goes to onboarding', async () => {
   const actor = createTestActor({ role: 'user', onboardingComplete: false })
   actor.start()
   actor.send({ type: 'LOGIN_SUCCESS', userId: '1' })
-  await new Promise((r) => setTimeout(r, 0))
-  expect(actor.getSnapshot().value).toBe('onboarding')
+  const snapshot = await waitFor(actor, (s) => s.matches('onboarding'))
+  expect(snapshot.value).toBe('onboarding')
 })
 
 test('error leads to retry flow', async () => {
@@ -212,9 +211,9 @@ test('error leads to retry flow', async () => {
   )
   actor.start()
   actor.send({ type: 'LOGIN_SUCCESS', userId: '1' })
-  await new Promise((r) => setTimeout(r, 0))
-  expect(actor.getSnapshot().value).toBe('profileError')
-  expect(actor.getSnapshot().context.error).toBe('Network error')
+  const snapshot = await waitFor(actor, (s) => s.matches('profileError'))
+  expect(snapshot.value).toBe('profileError')
+  expect(snapshot.context.error).toBe('Network error')
 })
 ```
 

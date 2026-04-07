@@ -308,7 +308,7 @@ function stepStatus(currentState: string, stepState: string) {
 
 ```tsx
 // machines/__tests__/fulfill-order.test.ts
-import { createActor, fromPromise } from 'xstate'
+import { createActor, fromPromise, waitFor } from 'xstate'
 import { fulfillOrderMachine } from '../fulfill-order'
 
 function createTestActor(overrides: Record<string, () => Promise<any>> = {}) {
@@ -335,11 +335,9 @@ test('happy path: reserve → charge → ship → complete', async () => {
   actor.start()
   actor.send({ type: 'FULFILL', orderId: 'order-1' })
 
-  // Wait for all async steps
-  await new Promise((r) => setTimeout(r, 50))
-
-  expect(actor.getSnapshot().value).toBe('complete')
-  expect(actor.getSnapshot().context.shipmentId).toBe('ship-1')
+  const snapshot = await waitFor(actor, (s) => s.matches('complete'))
+  expect(snapshot.value).toBe('complete')
+  expect(snapshot.context.shipmentId).toBe('ship-1')
 })
 
 test('payment failure triggers inventory rollback', async () => {
@@ -349,12 +347,11 @@ test('payment failure triggers inventory rollback', async () => {
   actor.start()
   actor.send({ type: 'FULFILL', orderId: 'order-1' })
 
-  await new Promise((r) => setTimeout(r, 50))
-
-  expect(actor.getSnapshot().value).toBe('failed')
-  expect(actor.getSnapshot().context.error?.step).toBe('chargePayment')
+  const snapshot = await waitFor(actor, (s) => s.matches('failed'))
+  expect(snapshot.value).toBe('failed')
+  expect(snapshot.context.error?.step).toBe('chargePayment')
   // Inventory was released (rollingBackInventory completed)
-  expect(actor.getSnapshot().context.reservationId).toBe('res-1')
+  expect(snapshot.context.reservationId).toBe('res-1')
 })
 
 test('shipment failure triggers payment refund then inventory release', async () => {
@@ -368,9 +365,8 @@ test('shipment failure triggers payment refund then inventory release', async ()
   actor.start()
   actor.send({ type: 'FULFILL', orderId: 'order-1' })
 
-  await new Promise((r) => setTimeout(r, 50))
-
-  expect(actor.getSnapshot().value).toBe('failed')
+  const snapshot = await waitFor(actor, (s) => s.matches('failed'))
+  expect(snapshot.value).toBe('failed')
   expect(rollbackOrder).toEqual(['refund', 'release'])
 })
 ```
