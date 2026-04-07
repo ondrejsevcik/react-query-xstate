@@ -214,6 +214,79 @@ import { shallowEqual } from '@xstate/react' // or your own
 const address = useSelector(actorRef, (s) => s.context.shippingAddress, shallowEqual)
 ```
 
-## 13. Start with Pattern A, escalate to Pattern B when needed
+## 13. Error boundaries go inside the machine provider
+
+When an error boundary catches, it unmounts everything beneath it. If the boundary wraps *outside* the provider, the actor is destroyed and all flow state is lost — which step the user is on, form inputs, selections. Place the boundary *inside* so the actor survives and can orchestrate recovery.
+
+```
+<MachineProvider>              ← actor survives errors
+  <ErrorBoundary fallback>     ← catches step-level failures
+    <Suspense fallback>
+      <StepComponent />        ← may throw (query error, render error)
+    </Suspense>
+  </ErrorBoundary>
+</MachineProvider>
+```
+
+### Recovery: the actor is alive in the fallback
+
+Because the actor survives, the error boundary's fallback can send events to the machine:
+
+```tsx
+function StepErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
+  const actorRef = CheckoutFlow.useActorRef()
+
+  return (
+    <div>
+      <p>Something went wrong loading this step.</p>
+      <button onClick={() => {
+        actorRef.send({ type: 'BACK' })
+        resetErrorBoundary()
+      }}>
+        Go back
+      </button>
+      <button onClick={() => resetErrorBoundary()}>
+        Retry
+      </button>
+    </div>
+  )
+}
+```
+
+### React Router: don't use `errorElement` for step errors
+
+React Router's `errorElement` acts as an error boundary at the route level. If your machine provider lives inside a route layout, `errorElement` will unmount the layout — killing the provider and the actor.
+
+```tsx
+// BAD: errorElement unmounts CheckoutLayout, destroying the actor
+{
+  path: '/checkout',
+  Component: CheckoutLayout,   // ← provider lives here
+  errorElement: <CheckoutError />, // ← kills the provider
+  children: [...]
+}
+
+// GOOD: provider above router (Pattern E) — actor survives route errors
+<CheckoutFlow.Provider>
+  <RouterProvider router={router} />
+</CheckoutFlow.Provider>
+
+// GOOD: error boundary inside the layout, under the provider
+function CheckoutLayout() {
+  return (
+    <CheckoutFlow.Provider>
+      <ErrorBoundary FallbackComponent={StepErrorFallback}>
+        <Suspense fallback={<StepSkeleton />}>
+          <Outlet />
+        </Suspense>
+      </ErrorBoundary>
+    </CheckoutFlow.Provider>
+  )
+}
+```
+
+Reserve `errorElement` for truly fatal errors where losing the flow is acceptable (e.g., the entire app shell fails to load).
+
+## 14. Start with Pattern A, escalate to Pattern B when needed
 
 Pattern A (Flow Controller) is the simplest and cleanest. Only escalate to Pattern B (Orchestrator) when you need the machine to branch based on server data content. Only escalate to Pattern D when you have multi-step mutations with rollback needs.
