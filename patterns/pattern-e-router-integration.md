@@ -148,6 +148,8 @@ export const onboardingMachine = setup({
 
 This is the critical piece — it syncs machine state with the URL in both directions.
 
+> **Note:** `useEffectEvent` requires React 19+.
+
 ```tsx
 // components/OnboardingBridge.tsx
 import { useEffect, useEffectEvent, useRef } from 'react'

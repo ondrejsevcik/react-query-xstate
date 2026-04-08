@@ -219,6 +219,8 @@ If sending an event causes a state change that changes `enabled`, which triggers
 
 ## Custom Hook to Encapsulate the Bridge
 
+> **Note:** `useEffectEvent` requires React 19+.
+
 ```tsx
 // hooks/useQueryBridge.ts
 import { useEffect, useEffectEvent } from 'react'
