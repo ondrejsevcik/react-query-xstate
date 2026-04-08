@@ -119,7 +119,7 @@ export const authFlowMachine = setup({
 
 ```tsx
 // components/AuthFlow.tsx
-import { useMachine } from '@xstate/react'
+import { useActorRef, useSelector } from '@xstate/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { fromPromise } from 'xstate'
 import { authFlowMachine } from '../machines/auth-flow'
@@ -128,7 +128,7 @@ import { fetchUserProfile } from '../api/users'
 export function AuthFlow() {
   const queryClient = useQueryClient()
 
-  const [snapshot, send] = useMachine(
+  const actorRef = useActorRef(
     authFlowMachine.provide({
       actors: {
         loadUserProfile: fromPromise(async ({ input }) => {
@@ -145,20 +145,23 @@ export function AuthFlow() {
     })
   )
 
+  const step = useSelector(actorRef, (s) => s.value)
+  const error = useSelector(actorRef, (s) => s.context.error)
+
   return (
     <>
-      {snapshot.matches('unauthenticated') && <LoginForm onSuccess={(userId) => send({ type: 'LOGIN_SUCCESS', userId })} />}
-      {snapshot.matches('loadingProfile') && <FullPageSpinner />}
-      {snapshot.matches('profileError') && (
+      {step === 'unauthenticated' && <LoginForm onSuccess={(userId) => actorRef.send({ type: 'LOGIN_SUCCESS', userId })} />}
+      {step === 'loadingProfile' && <FullPageSpinner />}
+      {step === 'profileError' && (
         <ErrorScreen
-          message={snapshot.context.error}
-          onRetry={() => send({ type: 'RETRY' })}
-          onLogout={() => send({ type: 'LOGOUT' })}
+          message={error}
+          onRetry={() => actorRef.send({ type: 'RETRY' })}
+          onLogout={() => actorRef.send({ type: 'LOGOUT' })}
         />
       )}
-      {snapshot.matches('adminDashboard') && <AdminDashboard />}
-      {snapshot.matches('onboarding') && <OnboardingWizard />}
-      {snapshot.matches('home') && <HomePage />}
+      {step === 'adminDashboard' && <AdminDashboard />}
+      {step === 'onboarding' && <OnboardingWizard />}
+      {step === 'home' && <HomePage />}
     </>
   )
 }

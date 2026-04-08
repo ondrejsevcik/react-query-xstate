@@ -207,7 +207,7 @@ export const fulfillOrderMachine = setup({
 
 ```tsx
 // components/FulfillOrder.tsx
-import { useMachine } from '@xstate/react'
+import { useActorRef, useSelector } from '@xstate/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { fromPromise } from 'xstate'
 import { fulfillOrderMachine } from '../machines/fulfill-order'
@@ -216,7 +216,7 @@ import * as api from '../api/orders'
 export function FulfillOrder({ orderId }: { orderId: string }) {
   const queryClient = useQueryClient()
 
-  const [snapshot, send] = useMachine(
+  const actorRef = useActorRef(
     fulfillOrderMachine.provide({
       actors: {
         reserveInventory: fromPromise(async ({ input }) =>
@@ -244,7 +244,11 @@ export function FulfillOrder({ orderId }: { orderId: string }) {
     { input: { orderId } }
   )
 
-  const { value, context } = snapshot
+  const step = useSelector(actorRef, (s) => s.value)
+  const error = useSelector(actorRef, (s) => s.context.error)
+  const reservationId = useSelector(actorRef, (s) => s.context.reservationId)
+  const chargeId = useSelector(actorRef, (s) => s.context.chargeId)
+  const shipmentId = useSelector(actorRef, (s) => s.context.shipmentId)
 
   return (
     <div>
@@ -253,39 +257,39 @@ export function FulfillOrder({ orderId }: { orderId: string }) {
       {/* Progress indicator */}
       <FulfillmentProgress
         steps={[
-          { label: 'Reserve Inventory', status: stepStatus(value, 'reservingInventory') },
-          { label: 'Charge Payment', status: stepStatus(value, 'chargingPayment') },
-          { label: 'Create Shipment', status: stepStatus(value, 'creatingShipment') },
+          { label: 'Reserve Inventory', status: stepStatus(step, 'reservingInventory') },
+          { label: 'Charge Payment', status: stepStatus(step, 'chargingPayment') },
+          { label: 'Create Shipment', status: stepStatus(step, 'creatingShipment') },
         ]}
       />
 
-      {snapshot.matches('idle') && (
-        <button onClick={() => send({ type: 'FULFILL', orderId })}>
+      {step === 'idle' && (
+        <button onClick={() => actorRef.send({ type: 'FULFILL', orderId })}>
           Start Fulfillment
         </button>
       )}
 
-      {snapshot.matches('failed') && (
+      {step === 'failed' && (
         <div>
-          <p>Failed at: {context.error?.step}</p>
-          <p>{context.error?.message}</p>
-          <button onClick={() => send({ type: 'RETRY' })}>Retry</button>
-          <button onClick={() => send({ type: 'CANCEL' })}>Cancel</button>
+          <p>Failed at: {error?.step}</p>
+          <p>{error?.message}</p>
+          <button onClick={() => actorRef.send({ type: 'RETRY' })}>Retry</button>
+          <button onClick={() => actorRef.send({ type: 'CANCEL' })}>Cancel</button>
         </div>
       )}
 
-      {snapshot.matches('rollbackFailed') && (
+      {step === 'rollbackFailed' && (
         <div>
           <p>CRITICAL: Rollback failed. Manual intervention required.</p>
-          <p>Reservation: {context.reservationId}</p>
-          <p>Charge: {context.chargeId}</p>
+          <p>Reservation: {reservationId}</p>
+          <p>Charge: {chargeId}</p>
         </div>
       )}
 
-      {snapshot.matches('complete') && (
+      {step === 'complete' && (
         <div>
           <p>Order fulfilled successfully!</p>
-          <p>Shipment: {context.shipmentId}</p>
+          <p>Shipment: {shipmentId}</p>
         </div>
       )}
     </div>

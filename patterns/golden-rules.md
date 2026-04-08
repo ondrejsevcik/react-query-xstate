@@ -178,20 +178,17 @@ export const canGoBackSelector = (snapshot: SnapshotFrom<typeof onboardingMachin
 
 ## 12. Use `useActorRef` + `useSelector`, not `useMachine`
 
-`useMachine` re-renders the component on **every** state change. `useActorRef` returns a stable ref that never causes re-renders on its own, and `useSelector` subscribes to only the slice you need.
+`useMachine` re-renders the component on **every** state change. `useActorRef` returns a stable ref that never causes re-renders on its own, and `useSelector` subscribes to only the slice you need:
 
 ```tsx
-// BAD: re-renders on every transition, even if this component only reads `step`
-const [snapshot, send] = useMachine(checkoutMachine)
-const step = snapshot.value
-
-// GOOD: only re-renders when `step` actually changes
 const actorRef = useActorRef(checkoutMachine)
 const step = useSelector(actorRef, (s) => s.value)
-const send = actorRef.send
+const selectedProductId = useSelector(actorRef, (s) => s.context.selectedProductId)
 ```
 
-Always default to `useActorRef` + `useSelector`. It costs one extra line, but you never need to rewrite when you later want to narrow the subscription. Define selectors alongside the machine to keep them in sync:
+This costs one extra line per selector, but each subscription is independent — the component only re-renders when the selected value actually changes. All examples in this guide follow this pattern.
+
+Define selectors alongside the machine to keep them in sync:
 
 ```tsx
 // machines/checkout.ts

@@ -140,14 +140,20 @@ export const checkoutMachine = setup({
 
 ```tsx
 // components/Checkout.tsx
-import { useMachine } from '@xstate/react'
+import { useActorRef, useSelector } from '@xstate/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { checkoutMachine } from '../machines/checkout'
 
 export function Checkout() {
-  const [snapshot, send] = useMachine(checkoutMachine)
+  const actorRef = useActorRef(checkoutMachine)
   const queryClient = useQueryClient()
-  const { context } = snapshot
+
+  // --- Select only what's needed ---
+  const step = useSelector(actorRef, (s) => s.value)
+  const selectedProductId = useSelector(actorRef, (s) => s.context.selectedProductId)
+  const quantity = useSelector(actorRef, (s) => s.context.quantity)
+  const shippingAddress = useSelector(actorRef, (s) => s.context.shippingAddress)
+  const paymentMethodId = useSelector(actorRef, (s) => s.context.paymentMethodId)
 
   // --- React Query handles all server data ---
 
@@ -159,23 +165,23 @@ export function Checkout() {
 
   // Selected product details — enabled when a product is selected
   const { data: product } = useQuery({
-    queryKey: ['product', context.selectedProductId],
-    queryFn: () => fetchProduct(context.selectedProductId!),
-    enabled: !!context.selectedProductId,
+    queryKey: ['product', selectedProductId],
+    queryFn: () => fetchProduct(selectedProductId!),
+    enabled: !!selectedProductId,
   })
 
   // Shipping rates — enabled when we're on the shipping step
   const { data: shippingRates } = useQuery({
-    queryKey: ['shipping-rates', context.shippingAddress?.zip],
-    queryFn: () => fetchShippingRates(context.shippingAddress!.zip),
-    enabled: snapshot.matches('shipping') && !!context.shippingAddress?.zip,
+    queryKey: ['shipping-rates', shippingAddress?.zip],
+    queryFn: () => fetchShippingRates(shippingAddress!.zip),
+    enabled: step === 'shipping' && !!shippingAddress?.zip,
   })
 
   // Payment methods — prefetch when user reaches payment step
   const { data: paymentMethods } = useQuery({
     queryKey: ['payment-methods'],
     queryFn: fetchPaymentMethods,
-    enabled: snapshot.matches('payment') || snapshot.matches('reviewing'),
+    enabled: step === 'payment' || step === 'reviewing',
   })
 
   // Place order mutation — callbacks are the sole bridge to the machine.
@@ -183,78 +189,78 @@ export function Checkout() {
   // transitions to 'submitting' at exactly the right moment.
   const placeOrder = useMutation({
     mutationFn: (order: OrderPayload) => submitOrder(order),
-    onMutate: () => send({ type: 'CONFIRM' }),
+    onMutate: () => actorRef.send({ type: 'CONFIRM' }),
     onSuccess: () => {
-      send({ type: 'ORDER_PLACED' })
+      actorRef.send({ type: 'ORDER_PLACED' })
       queryClient.invalidateQueries({ queryKey: ['orders'] })
     },
     onError: () => {
-      send({ type: 'ORDER_FAILED' })
+      actorRef.send({ type: 'ORDER_FAILED' })
     },
   })
 
   // --- Machine state determines which UI to show ---
 
-  if (snapshot.matches('selectingProduct')) {
+  if (step === 'selectingProduct') {
     return (
       <ProductSelector
         products={products}
-        selectedId={context.selectedProductId}
-        quantity={context.quantity}
-        onSelect={(productId) => send({ type: 'SELECT_PRODUCT', productId })}
-        onQuantityChange={(quantity) => send({ type: 'SET_QUANTITY', quantity })}
-        onNext={(address) => send({ type: 'SUBMIT_SHIPPING', address })}
+        selectedId={selectedProductId}
+        quantity={quantity}
+        onSelect={(productId) => actorRef.send({ type: 'SELECT_PRODUCT', productId })}
+        onQuantityChange={(quantity) => actorRef.send({ type: 'SET_QUANTITY', quantity })}
+        onNext={(address) => actorRef.send({ type: 'SUBMIT_SHIPPING', address })}
       />
     )
   }
 
-  if (snapshot.matches('shipping')) {
+  if (step === 'shipping') {
     return (
       <ShippingForm
         rates={shippingRates}
-        onSubmit={(address) => send({ type: 'SUBMIT_SHIPPING', address })}
-        onBack={() => send({ type: 'BACK' })}
+        onSubmit={(address) => actorRef.send({ type: 'SUBMIT_SHIPPING', address })}
+        onBack={() => actorRef.send({ type: 'BACK' })}
       />
     )
   }
 
-  if (snapshot.matches('payment')) {
+  if (step === 'payment') {
     return (
       <PaymentSelector
         methods={paymentMethods}
-        onSelect={(methodId) => send({ type: 'SELECT_PAYMENT', methodId })}
-        onBack={() => send({ type: 'BACK' })}
+        onSelect={(methodId) => actorRef.send({ type: 'SELECT_PAYMENT', methodId })}
+        onBack={() => actorRef.send({ type: 'BACK' })}
       />
     )
   }
 
-  if (snapshot.matches('reviewing')) {
+  if (step === 'reviewing') {
     return (
       <OrderReview
         product={product}
-        quantity={context.quantity}
-        address={context.shippingAddress}
+        quantity={quantity}
+        address={shippingAddress}
         onConfirm={() =>
           placeOrder.mutate({
-            productId: context.selectedProductId!,
-            quantity: context.quantity,
-            shippingAddress: context.shippingAddress!,
-            paymentMethodId: context.paymentMethodId!,
+            productId: selectedProductId!,
+            quantity: quantity,
+            shippingAddress: shippingAddress!,
+            paymentMethodId: paymentMethodId!,
           })
         }
-        onBack={() => send({ type: 'BACK' })}
+        onBack={() => actorRef.send({ type: 'BACK' })}
       />
     )
   }
 
-  if (snapshot.matches('submitting')) {
+  if (step === 'submitting') {
     return <SubmittingOrder />
   }
 
-  if (snapshot.matches('complete')) {
+  if (step === 'complete') {
     return (
       <OrderComplete
-        onNewOrder={() => send({ type: 'RESET' })}
+        onNewOrder={() => actorRef.send({ type: 'RESET' })}
       />
     )
   }
@@ -270,15 +276,15 @@ The machine context only holds **user decisions**: which product they picked, wh
 
 ### 2. `enabled` flag derives from machine state
 ```tsx
-enabled: snapshot.matches('shipping') && !!context.shippingAddress?.zip
+enabled: step === 'shipping' && !!shippingAddress?.zip
 ```
 This is the bridge — machine state controls when queries run, but React Query manages the fetching lifecycle.
 
 ### 3. Mutation callbacks are the sole bridge to the machine
 ```tsx
-onMutate: () => send({ type: 'CONFIRM' })      // → submitting (sync, before request)
-onSuccess: () => send({ type: 'ORDER_PLACED' }) // → complete
-onError: () => send({ type: 'ORDER_FAILED' })   // → reviewing (retry)
+onMutate: () => actorRef.send({ type: 'CONFIRM' })      // → submitting (sync, before request)
+onSuccess: () => actorRef.send({ type: 'ORDER_PLACED' }) // → complete
+onError: () => actorRef.send({ type: 'ORDER_FAILED' })   // → reviewing (retry)
 ```
 The mutation's lifecycle callbacks drive all machine transitions. `onMutate` fires synchronously before the request, so the machine enters `submitting` at exactly the right moment — no dual-dispatch, no double-click risk. The component just calls `mutate()`; the mutation owns the bridge.
 

@@ -143,15 +143,17 @@ export const orderTrackingMachine = setup({
 
 ```tsx
 // components/OrderTracker.tsx
-import { useMachine } from '@xstate/react'
+import { useActorRef, useSelector } from '@xstate/react'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { orderTrackingMachine } from '../machines/order-tracking'
 
 export function OrderTracker({ orderId }: { orderId: string }) {
-  const [snapshot, send] = useMachine(orderTrackingMachine, {
+  const actorRef = useActorRef(orderTrackingMachine, {
     input: { orderId },
   })
+
+  const step = useSelector(actorRef, (s) => s.value)
 
   // React Query polls for updates
   const { data, error } = useQuery({
@@ -159,7 +161,7 @@ export function OrderTracker({ orderId }: { orderId: string }) {
     queryFn: () => fetchOrderStatus(orderId),
     refetchInterval: 30_000, // poll every 30s
     // Stop polling when order is in a final state
-    enabled: !snapshot.matches('delivered') && !snapshot.matches('cancelled'),
+    enabled: step !== 'delivered' && step !== 'cancelled',
   })
 
   // Bridge: send data updates to machine
@@ -167,24 +169,24 @@ export function OrderTracker({ orderId }: { orderId: string }) {
   // when the response hasn't changed, so this only fires on real updates
   useEffect(() => {
     if (data) {
-      send({ type: 'ORDER_UPDATE', data })
+      actorRef.send({ type: 'ORDER_UPDATE', data })
     }
-  }, [data, send])
+  }, [data, actorRef])
 
   useEffect(() => {
     if (error) {
-      send({ type: 'FETCH_ERROR', error: error.message })
+      actorRef.send({ type: 'FETCH_ERROR', error: error.message })
     }
-  }, [error, send])
+  }, [error, actorRef])
 
   // Render based on machine state
   return (
     <div>
-      <OrderStatusTimeline currentState={snapshot.value} />
-      {snapshot.matches('shipped') && <TrackingMap orderId={orderId} />}
-      {snapshot.matches('outForDelivery') && <LiveTrackingMap orderId={orderId} />}
-      {snapshot.matches('delivered') && <DeliveryConfirmation />}
-      {snapshot.matches('error') && <p>Having trouble loading updates...</p>}
+      <OrderStatusTimeline currentState={step} />
+      {step === 'shipped' && <TrackingMap orderId={orderId} />}
+      {step === 'outForDelivery' && <LiveTrackingMap orderId={orderId} />}
+      {step === 'delivered' && <DeliveryConfirmation />}
+      {step === 'error' && <p>Having trouble loading updates...</p>}
     </div>
   )
 }
@@ -200,9 +202,9 @@ React Query's **structural sharing** (`structuralSharing: true`, the default) ke
 // This is sufficient — no ref, no dataUpdatedAt needed
 useEffect(() => {
   if (data) {
-    send({ type: 'ORDER_UPDATE', data })
+    actorRef.send({ type: 'ORDER_UPDATE', data })
   }
-}, [data, send])
+}, [data, actorRef])
 ```
 
 ### What about React Strict Mode?
