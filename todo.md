@@ -19,12 +19,12 @@ Staff engineer review findings, to be triaged one by one.
 
 ## Pattern C (Reactive Bridge)
 
-- [ ] **Initial-mount-with-stale-data correctness gap** — `useEffect` bridge fires on mount with cached data. If query cache has stale data from a previous mount, machine processes a potentially stale `ORDER_UPDATE` immediately.
-- [ ] **`useQueryBridge` eslint-disable note** — `useEffectEvent` intentionally omitted from deps, but `react-hooks/exhaustive-deps` will warn. Worth noting for teams.
+- [x] **Initial-mount-with-stale-data correctness gap** — `useEffect` bridge fires on mount with cached data. If query cache has stale data from a previous mount, machine processes a potentially stale `ORDER_UPDATE` immediately.
+- [x] **`useQueryBridge` eslint-disable note** — `useEffectEvent` intentionally omitted from deps, but `react-hooks/exhaustive-deps` will warn. Worth noting for teams.
 
 ## Pattern D (Mutation Orchestration)
 
-- [ ] **Show retry-from-failed-step** — Currently RETRY always restarts from `reservingInventory`. The trade-offs section promises "trivial to add" but doesn't show it. This is a key selling point.
+- [x] **Show retry-from-failed-step** — Currently RETRY always restarts from `reservingInventory`. The trade-offs section promises "trivial to add" but doesn't show it. This is a key selling point.
 - [ ] **`event.error.message` assumes Error shape** — `event.error` is typed as `unknown` in XState v5 `onError`. Pattern B handles this with `toErrorMessage()`, Pattern D doesn't.
 
 ## Pattern E (Router Integration)

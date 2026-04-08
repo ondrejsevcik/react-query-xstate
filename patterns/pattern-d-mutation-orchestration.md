@@ -186,7 +186,18 @@ export const fulfillOrderMachine = setup({
 
     failed: {
       on: {
-        RETRY: 'reservingInventory',
+        RETRY: [
+          {
+            guard: ({ context }) => context.error?.step === 'createShipment',
+            target: 'creatingShipment',
+          },
+          {
+            guard: ({ context }) => context.error?.step === 'chargePayment',
+            target: 'chargingPayment',
+          },
+          // Default: restart from the beginning
+          { target: 'reservingInventory' },
+        ],
         CANCEL: 'cancelled',
       },
     },
@@ -446,7 +457,7 @@ The server is the source of truth for multi-step flows. The machine orchestrates
 - Rollback logic is structural, not buried in nested try/catch
 - Progress tracking is built in (just check `snapshot.value`)
 - Each step is independently testable via actor injection
-- Retry can resume from the failed step (not shown above, but trivial to add)
+- Retry resumes from the failed step — guards on `context.error.step` route to the right state
 
 **Costs:**
 - More upfront code than a simple `useMutation`
