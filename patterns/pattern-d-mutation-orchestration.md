@@ -313,7 +313,7 @@ export function FulfillOrder({ orderId }: { orderId: string }) {
 
 function stepStatus(currentState: string, stepState: string) {
   const order = ['reservingInventory', 'chargingPayment', 'creatingShipment']
-  const currentIdx = order.indexOf(currentState as string)
+  const currentIdx = order.indexOf(currentState)
   const stepIdx = order.indexOf(stepState)
 
   if (currentState === 'complete' || currentState === 'invalidatingCache') return 'done'

@@ -158,18 +158,20 @@ export function Checkout() {
     queryFn: fetchProducts,
   })
 
-  // Selected product details — enabled when a product is selected
+  // Selected product details — skipToken disables the query when there's no ID
   const { data: product } = useQuery({
     queryKey: ['product', selectedProductId],
-    queryFn: () => fetchProduct(selectedProductId!),
-    enabled: !!selectedProductId,
+    queryFn: selectedProductId
+      ? () => fetchProduct(selectedProductId)
+      : skipToken,
   })
 
-  // Shipping rates — enabled when we're on the shipping step
+  // Shipping rates — skipToken disables the query until we have a zip
   const { data: shippingRates } = useQuery({
     queryKey: ['shipping-rates', shippingAddress?.zip],
-    queryFn: () => fetchShippingRates(shippingAddress!.zip),
-    enabled: step === 'shipping' && !!shippingAddress?.zip,
+    queryFn: step === 'shipping' && shippingAddress?.zip
+      ? () => fetchShippingRates(shippingAddress.zip)
+      : skipToken,
   })
 
   // Payment methods — prefetch when user reaches payment step
@@ -311,7 +313,7 @@ if (snapshot.matches('shipping')) {
   return (
     <Suspense fallback={<ShippingFormSkeleton />}>
       <ShippingStep
-        zip={context.shippingAddress!.zip}
+        zip={context.shippingAddress?.zip ?? ''}
         onSubmit={(address) => send({ type: 'SUBMIT_SHIPPING', address })}
         onBack={() => send({ type: 'BACK' })}
       />

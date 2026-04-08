@@ -270,7 +270,7 @@ export function OnboardingBridge() {
     const newState = actorRef.getSnapshot().value
     if (newState !== targetStep) {
       // Machine rejected the navigation — correct the URL back
-      const correctPath = STATE_TO_PATH[newState as string]
+      const correctPath = STATE_TO_PATH[newState]
       if (correctPath) {
         machineNavigatedRef.current = true
         navigate(correctPath, { replace: true })
@@ -581,8 +581,8 @@ export function ProfileStep() {
         const data = new FormData(e.currentTarget)
         actorRef.send({
           type: 'SUBMIT_PROFILE',
-          name: data.get('name') as string,
-          role: data.get('role') as string,
+          name: String(data.get('name') ?? ''),
+          role: String(data.get('role') ?? ''),
         })
       }}
     >
@@ -606,8 +606,8 @@ export function WorkspaceStep() {
         const data = new FormData(e.currentTarget)
         actorRef.send({
           type: 'SUBMIT_WORKSPACE',
-          name: data.get('workspace') as string,
-          plan: data.get('plan') as string,
+          name: String(data.get('workspace') ?? ''),
+          plan: String(data.get('plan') ?? ''),
         })
       }}
     >
