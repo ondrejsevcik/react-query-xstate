@@ -25,7 +25,7 @@ Staff engineer review findings, to be triaged one by one.
 ## Pattern D (Mutation Orchestration)
 
 - [x] **Show retry-from-failed-step** — Currently RETRY always restarts from `reservingInventory`. The trade-offs section promises "trivial to add" but doesn't show it. This is a key selling point.
-- [ ] **`event.error.message` assumes Error shape** — `event.error` is typed as `unknown` in XState v5 `onError`. Pattern B handles this with `toErrorMessage()`, Pattern D doesn't.
+- [x] **`event.error.message` assumes Error shape** — `event.error` is typed as `unknown` in XState v5 `onError`. Pattern B handles this with `toErrorMessage()`, Pattern D doesn't.
 
 ## Pattern E (Router Integration)
 

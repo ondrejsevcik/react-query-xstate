@@ -27,6 +27,10 @@ type FulfillmentContext = {
   error: { step: string; message: string } | null
 }
 
+function toErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
 export const fulfillOrderMachine = setup({
   types: {
     context: {} as FulfillmentContext,
@@ -90,7 +94,7 @@ export const fulfillOrderMachine = setup({
           actions: assign({
             error: ({ event }) => ({
               step: 'reserveInventory',
-              message: event.error.message,
+              message: toErrorMessage(event.error),
             }),
           }),
         },
@@ -113,7 +117,7 @@ export const fulfillOrderMachine = setup({
           actions: assign({
             error: ({ event }) => ({
               step: 'chargePayment',
-              message: event.error.message,
+              message: toErrorMessage(event.error),
             }),
           }),
         },
@@ -139,7 +143,7 @@ export const fulfillOrderMachine = setup({
           actions: assign({
             error: ({ event }) => ({
               step: 'createShipment',
-              message: event.error.message,
+              message: toErrorMessage(event.error),
             }),
           }),
         },
