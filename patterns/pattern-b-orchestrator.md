@@ -246,4 +246,4 @@ Both methods read the cache and respect `staleTime` — neither blindly fetches.
 **Costs:**
 - You lose per-observer React Query features (`select`, `placeholderData`, `refetchInterval`)
 - Components using `useQuery` alongside the machine need to coordinate
-- `ensureQueryData` doesn't create a live subscription — background refetches won't update the machine
+- `fetchQuery` (like `ensureQueryData`) doesn't create a live subscription — background refetches won't update the machine. Only `useQuery` / `QueryObserver` subscribe to ongoing updates
