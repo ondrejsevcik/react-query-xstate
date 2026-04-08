@@ -188,8 +188,8 @@ export function Checkout() {
   })
 
   // Place order mutation — callbacks are the sole bridge to the machine.
-  // onMutate fires synchronously before the request, so the machine
-  // transitions to 'submitting' at exactly the right moment.
+  // onMutate fires before the request, so the machine transitions to
+  // 'submitting' at exactly the right moment.
   const placeOrder = useMutation({
     mutationFn: (order: OrderPayload) => submitOrder(order),
     onMutate: () => actorRef.send({ type: 'CONFIRM' }),
@@ -289,11 +289,11 @@ This is the bridge — machine state controls when queries run, but React Query 
 
 ### 3. Mutation callbacks are the sole bridge to the machine
 ```tsx
-onMutate: () => actorRef.send({ type: 'CONFIRM' })      // → submitting (sync, before request)
+onMutate: () => actorRef.send({ type: 'CONFIRM' })      // → submitting (before request)
 onSuccess: () => actorRef.send({ type: 'ORDER_PLACED' }) // → complete
 onError: () => actorRef.send({ type: 'ORDER_FAILED' })   // → reviewing (retry)
 ```
-The mutation's lifecycle callbacks drive all machine transitions. `onMutate` fires synchronously before the request, so the machine enters `submitting` at exactly the right moment — no dual-dispatch, no double-click risk. The component just calls `mutate()`; the mutation owns the bridge.
+The mutation's lifecycle callbacks drive all machine transitions. `onMutate` fires before the request (`await`ed if async — ours returns void so it's effectively immediate), so the machine enters `submitting` at exactly the right moment — no dual-dispatch, no double-click risk. The component just calls `mutate()`; the mutation owns the bridge.
 
 ### 4. The machine's `submitting` state has no `invoke`
 The machine doesn't own the mutation. It just represents the semantic state "we are submitting." React Query's `useMutation` does the actual work. This avoids double-tracking the loading state.

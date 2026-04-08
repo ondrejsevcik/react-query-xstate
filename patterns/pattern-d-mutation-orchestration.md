@@ -462,3 +462,5 @@ The server is the source of truth for multi-step flows. The machine orchestrates
 - More upfront code than a simple `useMutation`
 - Overkill for single-step mutations (just use `useMutation` directly)
 - Cache invalidation is a separate step — must remember to include it
+- Beyond 4-5 steps, the flat forward/rollback paths become hard to follow — consider hierarchical states to group related steps, or move the saga server-side
+- **React StrictMode** double-mounts components in development, which means `useActorRef` creates, stops, and recreates the actor — invoking `reserveInventory` twice. This is dev-only and won't happen in production, but be aware of it when debugging. If it's disruptive, gate the `FULFILL` event behind user interaction rather than auto-starting on mount
