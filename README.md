@@ -2,6 +2,18 @@
 
 A practical guide for combining TanStack Query v5 and XState v5 in React applications.
 
+## Prerequisites
+
+This guide assumes:
+
+- **React 19+** — examples use `useEffectEvent` (React 19 API)
+- **XState v5** — uses `setup()`, `fromPromise`, `useActorRef`, `useSelector`
+- **TanStack Query v5** — uses `ensureQueryData`, `queryOptions`, structural sharing defaults
+
+Earlier versions have different APIs and some patterns won't apply directly.
+
+This guide focuses on **integration patterns** between these libraries. It assumes working knowledge of React, XState, and TanStack Query individually — it won't teach you state machines, query caching, or React fundamentals.
+
 ## The Core Principle
 
 > **React Query owns server state. XState owns application flow. Neither should do the other's job.**

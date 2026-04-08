@@ -29,12 +29,12 @@ Staff engineer review findings, to be triaged one by one.
 
 ## Pattern E (Router Integration)
 
-- [ ] **`machineNavigatedRef` loop-breaker is fragile** — Mutable ref to break event loops is a maintenance hazard. Consider documenting the assumption or suggesting alternatives.
-- [ ] **`SYNC_TO_STEP` + `getSnapshot()` race assumption** — Code assumes `getSnapshot()` after `send()` reflects the new state. True for sync events in XState v5 but not a documented contract.
+- [x] **`machineNavigatedRef` loop-breaker is fragile** — Mutable ref to break event loops is a maintenance hazard. Consider documenting the assumption or suggesting alternatives.
+- [x] **`SYNC_TO_STEP` + `getSnapshot()` race assumption** — Code assumes `getSnapshot()` after `send()` reflects the new state. True for sync events in XState v5 but not a documented contract.
 
 ## Golden Rules / General
 
-- [ ] **Add XState v5 + TanStack Query v5 version requirement** — The guide assumes v5 of both libraries (`setup()`, `fromPromise`, etc.) but never states this.
+- [x] **Add XState v5 + TanStack Query v5 version requirement** — The guide assumes v5 of both libraries (`setup()`, `fromPromise`, etc.) but never states this.
 - [ ] **Non-null assertions in examples** — Several examples use `!` assertions (`context.selectedProductId!`). Show type-safe alternatives (discriminated unions, context narrowing via `snapshot.matches()`).
 - [ ] **No mention of DevTools** — `@xstate/inspect` and TanStack Query DevTools are both excellent. A section on how they complement each other during debugging would add value.
 - [ ] **Missing visual data flow diagram** — The decision tree is textual. A diagram showing what happens on a user action (machine transition → query enabled/disabled → cache hit/miss) would make the mental model concrete.
