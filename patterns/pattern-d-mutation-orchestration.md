@@ -406,6 +406,39 @@ const fulfillOrder = useMutation({
 
 The machine makes every state explicit, every transition visible, every failure mode testable.
 
+## Recovery After Interruption
+
+The examples above assume the flow runs start-to-finish in a single mount. In reality, users reload pages, navigate away, or lose connectivity mid-flow. If `chargePayment` succeeded but the component unmounted before `createShipment`, the machine is gone — but the server-side state is not.
+
+**The fix: initialize from server state.** Fetch the order's current status on mount and start the machine at the correct step:
+
+```tsx
+// Fetch order status, then initialize machine at the right point
+const { data: order } = useQuery({
+  queryKey: ['order', orderId],
+  queryFn: () => fetchOrder(orderId),
+})
+
+const actorRef = useActorRef(
+  fulfillOrderMachine.provide({ actors: { /* ... */ } }),
+  {
+    input: { orderId },
+    // Start from where the server left off
+    snapshot: order ? snapshotFromOrder(order) : undefined,
+  }
+)
+
+function snapshotFromOrder(order: Order) {
+  // Map server state to machine state
+  if (order.shipmentId) return undefined // already complete, no machine needed
+  if (order.chargeId) return { value: 'creatingShipment', context: { ... } }
+  if (order.reservationId) return { value: 'chargingPayment', context: { ... } }
+  return undefined // start from the beginning
+}
+```
+
+The server is the source of truth for multi-step flows. The machine orchestrates the *current session's* progress, but it should always be rebuildable from server state. This only matters for flows with irreversible side effects (payments, shipments) — if every step is idempotent, simply restarting from the beginning is fine.
+
 ## Trade-offs
 
 **Gains:**

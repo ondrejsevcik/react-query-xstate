@@ -6,7 +6,7 @@ Staff engineer review findings, to be triaged one by one.
 
 - [x] **`useMachine` vs `useActorRef` contradiction** — Rule 12 says always use `useActorRef` + `useSelector`, but every pattern example uses `useMachine`. Either update examples or add a note explaining the simplification.
 - [x] **Missing React 19 / concurrent features guidance** — `useEffectEvent` (Pattern C, E) is React 19+ only. No mention of this. Also no guidance on Suspense + synchronous `send()` interaction in concurrent mode.
-- [ ] **Machine lifecycle vs component lifecycle** — No guidance on what happens when a component unmounts during an active `invoke` (e.g., charge already hit payment processor but `FulfillOrder` unmounted).
+- [x] **Machine lifecycle vs component lifecycle** — No guidance on what happens when a component unmounts during an active `invoke` (e.g., charge already hit payment processor but `FulfillOrder` unmounted).
 
 ## Pattern A (Flow Controller)
 
