@@ -114,14 +114,16 @@ states: {
 
 ## 8. Prefer `ensureQueryData` over `fetchQuery`
 
-Both methods read the cache and respect `staleTime` — neither blindly fetches. The differences are subtler:
+Both methods read the cache and respect `staleTime` — neither blindly fetches. The key difference is how they handle errors:
 
-| Method | Behavior | Use when |
-|--------|----------|----------|
-| `ensureQueryData` | Returns cache if fresh. If stale/missing, fetches. Supports `revalidateIfStale` for background refresh | Default choice — "make sure this data exists" |
-| `fetchQuery` | Returns cache if fresh. If stale/missing, fetches. Throws on error | You need to handle errors explicitly in the machine's `onError` |
+| Method | On network error | Best for |
+|--------|-----------------|----------|
+| `ensureQueryData` | Returns stale cache if available. Only throws if cache is empty **and** fetch fails | Default choice — "give me data, stale is OK" |
+| `fetchQuery` | Always throws on error, even if stale cache exists | XState `invoke` actors where you need `onError` to fire reliably |
 
-`ensureQueryData` is correct 90% of the time — its "ensure" semantic matches what XState actors typically need: give me the data, whether from cache or network.
+**Inside XState invoke actors**, `fetchQuery` is often the better choice — it guarantees that a failed fetch routes to `onError`, so your machine can transition to an error state. With `ensureQueryData`, a network failure might silently return stale data via `onDone`, and your machine never knows the fetch failed.
+
+**Outside invoke actors** (e.g., prefetching in an action, warming the cache), `ensureQueryData` is the right default — you want data to exist, and stale is better than nothing.
 
 ## 9. Test machines without React
 

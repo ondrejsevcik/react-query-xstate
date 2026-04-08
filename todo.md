@@ -10,12 +10,12 @@ Staff engineer review findings, to be triaged one by one.
 
 ## Pattern A (Flow Controller)
 
-- [ ] **Remove empty `always` no-op block** — The empty `always` with a comment explaining it does nothing is noise. Remove or move comment outside.
-- [ ] **Document that unhandled events are load-bearing** — `onMutate: () => send({ type: 'CONFIRM' })` relies on XState silently dropping events with no handler (e.g., double-click sending CONFIRM while in `submitting`). Worth calling out for XState newcomers.
+- [x] **Remove empty `always` no-op block** — The empty `always` with a comment explaining it does nothing is noise. Remove or move comment outside.
+- [x] **Document that unhandled events are load-bearing** — `onMutate: () => send({ type: 'CONFIRM' })` relies on XState silently dropping events with no handler (e.g., double-click sending CONFIRM while in `submitting`). Worth calling out for XState newcomers.
 
 ## Pattern B (Orchestrator)
 
-- [ ] **`ensureQueryData` vs `fetchQuery` table is misleading** — Descriptions are nearly identical. The real difference: `fetchQuery` throws on error (maps to XState `onError`), `ensureQueryData` swallows errors for stale data. For XState invoke actors, `fetchQuery` may be the better default.
+- [x] **`ensureQueryData` vs `fetchQuery` table is misleading** — Descriptions are nearly identical. The real difference: `fetchQuery` throws on error (maps to XState `onError`), `ensureQueryData` swallows errors for stale data. For XState invoke actors, `fetchQuery` may be the better default.
 
 ## Pattern C (Reactive Bridge)
 

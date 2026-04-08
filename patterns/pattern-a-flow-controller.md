@@ -76,11 +76,6 @@ export const checkoutMachine = setup({
           actions: assign({ shippingAddress: ({ event }) => event.address }),
         },
       },
-      // Allow proceeding when product is selected
-      always: {
-        // This is intentionally NOT an always transition —
-        // we let the user explicitly proceed
-      },
     },
 
     shipping: {
