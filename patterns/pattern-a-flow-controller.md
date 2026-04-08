@@ -136,7 +136,7 @@ export const checkoutMachine = setup({
 ```tsx
 // components/Checkout.tsx
 import { useActorRef, useSelector } from '@xstate/react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, skipToken } from '@tanstack/react-query'
 import { checkoutMachine } from '../machines/checkout'
 
 export function Checkout() {
@@ -151,6 +151,12 @@ export function Checkout() {
   const paymentMethodId = useSelector(actorRef, (s) => s.context.paymentMethodId)
 
   // --- React Query handles all server data ---
+  //
+  // Conditional fetching uses two approaches:
+  // - skipToken: when the queryFn depends on a nullable value (selectedProductId, zip).
+  //   TypeScript knows the query might not run, so data is TData | undefined.
+  // - enabled: when the queryFn doesn't depend on the condition (payment methods exist
+  //   regardless of step). enabled is a runtime flag — simpler when there's no null to guard.
 
   // Products list — always available
   const { data: products } = useQuery({
@@ -232,6 +238,10 @@ export function Checkout() {
   }
 
   if (step === 'reviewing') {
+    // The machine guarantees these values exist in the reviewing state,
+    // but we guard at runtime to satisfy TypeScript without non-null assertions.
+    if (!selectedProductId || !shippingAddress || !paymentMethodId) return null
+
     return (
       <OrderReview
         product={product}
@@ -239,10 +249,10 @@ export function Checkout() {
         address={shippingAddress}
         onConfirm={() =>
           placeOrder.mutate({
-            productId: selectedProductId!,
+            productId: selectedProductId,
             quantity: quantity,
-            shippingAddress: shippingAddress!,
-            paymentMethodId: paymentMethodId!,
+            shippingAddress: shippingAddress,
+            paymentMethodId: paymentMethodId,
           })
         }
         onBack={() => actorRef.send({ type: 'BACK' })}

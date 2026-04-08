@@ -132,10 +132,11 @@ export function AuthFlow() {
     authFlowMachine.provide({
       actors: {
         loadUserProfile: fromPromise(async ({ input }) => {
-          // ensureQueryData = return cached if fresh, fetch if stale
-          // This populates the React Query cache, so other components
-          // using useQuery(['user', id]) get the data for free
-          return queryClient.ensureQueryData({
+          // fetchQuery throws on network error even if stale cache exists,
+          // ensuring onError fires so the machine can transition to an error state.
+          // This also populates the React Query cache, so other components
+          // using useQuery(['user', id]) get the data for free.
+          return queryClient.fetchQuery({
             queryKey: ['user', input.userId],
             queryFn: () => fetchUserProfile(input.userId),
             staleTime: 5 * 60 * 1000,
@@ -226,12 +227,14 @@ test('error leads to retry flow', async () => {
 
 ## `ensureQueryData` vs `fetchQuery`
 
-| Method | Behavior |
-|--------|----------|
-| `ensureQueryData` | Returns cached data if fresh (respects `staleTime`), fetches only if stale or missing |
-| `fetchQuery` | Always fetches, even if cache has fresh data |
+Both methods read the cache and respect `staleTime` — neither blindly fetches. The difference is error handling:
 
-**Prefer `ensureQueryData`** — it respects the cache, which is the whole point of using React Query. Use `fetchQuery` only when you explicitly need fresh data regardless of cache state.
+| Method | Cache behavior | On network error |
+|--------|---------------|-----------------|
+| `ensureQueryData` | Returns cached data if fresh, fetches if stale/missing | Returns stale cache if available; only throws if cache is empty **and** fetch fails |
+| `fetchQuery` | Returns cached data if fresh, fetches if stale/missing | Always throws, even if stale cache exists |
+
+**Inside invoke actors, prefer `fetchQuery`** — it guarantees that a failed fetch routes to `onError`, so your machine transitions to an error state. With `ensureQueryData`, a network failure might silently return stale data via `onDone`. **Outside invoke actors** (prefetching, cache warming), `ensureQueryData` is the right default.
 
 ## Trade-offs
 

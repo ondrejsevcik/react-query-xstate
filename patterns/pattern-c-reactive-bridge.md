@@ -35,6 +35,9 @@ export const orderTrackingMachine = setup({
   types: {
     context: {} as {
       orderId: string
+      // Note: this looks like duplicating server state (see Golden Rule 1), but it serves
+      // a different purpose — it's the machine's memory of which transitions already fired,
+      // not a cache of server data. The query cache remains the source of truth for display.
       lastKnownStatus: OrderStatus | null
     },
     events: {} as

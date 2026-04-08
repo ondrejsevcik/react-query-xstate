@@ -20,7 +20,9 @@ Machine state and URL can get out of sync in three ways:
 
 ## Architecture: Where to Place the Machine
 
-The machine must live **above the router** so it survives route transitions.
+The machine must live **above the routes it controls** so it survives route transitions. There are two valid placements:
+
+**Option 1: Above the router** — machine survives all navigation, including navigating away from the flow and back. Best for app-wide flows (auth, onboarding).
 
 ```
 <FlowProvider>              ← machine lives here
@@ -31,6 +33,17 @@ The machine must live **above the router** so it survives route transitions.
     </Layout>
   </RouterProvider>
 </FlowProvider>
+```
+
+**Option 2: Inside a route layout** — machine is scoped to the flow's routes and destroyed when the user navigates away. Best for self-contained flows (checkout, wizards) where you *want* a fresh start on re-entry. See the [full example below](#wiring-it-together) for this approach.
+
+```
+<RouterProvider>
+  <Route element={<OnboardingLayout />}>   ← machine lives here
+    <Route path="step-1" element={<Step1 />} />
+    <Route path="step-2" element={<Step2 />} />
+  </Route>
+</RouterProvider>
 ```
 
 ### Setup with `createActorContext`

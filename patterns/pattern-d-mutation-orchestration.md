@@ -190,18 +190,9 @@ export const fulfillOrderMachine = setup({
 
     failed: {
       on: {
-        RETRY: [
-          {
-            guard: ({ context }) => context.error?.step === 'createShipment',
-            target: 'creatingShipment',
-          },
-          {
-            guard: ({ context }) => context.error?.step === 'chargePayment',
-            target: 'chargingPayment',
-          },
-          // Default: restart from the beginning
-          { target: 'reservingInventory' },
-        ],
+        // Always retry from the beginning. After rollback, prior steps
+        // (reservation, charge) have been undone — we can't resume mid-chain.
+        RETRY: 'reservingInventory',
         CANCEL: 'cancelled',
       },
     },
@@ -415,7 +406,7 @@ const fulfillOrder = useMutation({
     }
   },
 })
-// No intermediate progress, no clear state, no retry from specific step,
+// No intermediate progress, no clear state, no clean retry,
 // no handling of rollback failures, no testability of the flow
 ```
 
@@ -443,6 +434,10 @@ const actorRef = useActorRef(
   }
 )
 
+// NOTE: This is pseudocode. XState v5's persisted snapshot format includes
+// additional fields (status, children, historyValue, etc.). In practice,
+// use getPersistedSnapshot() to capture the full shape, or build a complete
+// snapshot object. See: https://stately.ai/docs/persistence
 function snapshotFromOrder(order: Order) {
   // Map server state to machine state
   if (order.shipmentId) return undefined // already complete, no machine needed
@@ -461,7 +456,7 @@ The server is the source of truth for multi-step flows. The machine orchestrates
 - Rollback logic is structural, not buried in nested try/catch
 - Progress tracking is built in (just check `snapshot.value`)
 - Each step is independently testable via actor injection
-- Retry resumes from the failed step — guards on `context.error.step` route to the right state
+- Retry restarts cleanly from the beginning after rollback completes
 
 **Costs:**
 - More upfront code than a simple `useMutation`

@@ -40,10 +40,10 @@ setup({
 })
 
 // component.tsx — wires in queryClient
-useMachine(machine.provide({
+useActorRef(machine.provide({
   actors: {
     loadData: fromPromise(async ({ input }) =>
-      queryClient.ensureQueryData({ ... })
+      queryClient.fetchQuery({ ... })
     ),
   },
 }))
@@ -112,7 +112,7 @@ states: {
 
 ...you're rebuilding React Query. Just use `useQuery`. Reserve XState for flows with **multiple meaningful states** and **transitions between them**.
 
-## 8. Prefer `ensureQueryData` over `fetchQuery`
+## 8. Choose `ensureQueryData` vs `fetchQuery` based on context
 
 Both methods read the cache and respect `staleTime` — neither blindly fetches. The key difference is how they handle errors:
 
